@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="styles.css">
+    <title>student-dashboard</title>
+</head>
+<body class="dashboard-page" >
+    <div class="dashboard-container">
+    <h1>Welcome to Student Dashboard</h1>
+
+    <button id="logoutBtn">Logout</button>
+</div>
+    <script>
+
+        const logoutBtn = document.getElementById("logoutBtn");
+
+        logoutBtn.addEventListener("click", () => {
+
+            localStorage.removeItem("user");
+
+            window.location.href = "login.html";
+
+        });
+
+    </script>
+    
+</body>
+</html>
