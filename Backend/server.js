@@ -5,6 +5,7 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 const User = require('./models/User');
+const Attendance = require('./models/Attendance');
 
 const app = express();
 
@@ -147,6 +148,162 @@ app.post('/login', async (req, res) => {
     }
 
 });
+
+//Attendance Route
+
+app.post('/create-attendance', async (req, res) => {
+
+    try {
+
+        const { course, date, lecturer } = req.body;
+
+        const newAttendance = new Attendance({
+
+            course,
+            date,
+            lecturer,
+            students: []
+
+        });
+
+        await newAttendance.save();
+
+        res.json({
+            success: true,
+            message: "Attendance created successfully"
+        });
+
+    } catch (error) {
+
+        console.log(error);
+
+        res.json({
+            success: false,
+            message: "Failed to create attendance"
+        });
+
+    }
+
+});
+
+
+//Get all Students  
+
+app.get('/students', async (req, res) => {
+
+    try {
+
+        const students = await User.find({ role: "student" });
+
+        res.json(students);
+
+    } catch (error) {
+
+        console.log(error);
+
+        res.json([]);
+
+    }
+
+});
+
+//Mark Router 
+
+app.post('/mark', async (req, res) => {
+
+    try {
+
+        const { email, status, course } = req.body;
+
+        // Find the most recent attendance session for this course
+        const attendance = await Attendance.findOne({ course }).sort({ _id: -1 });
+
+        if (!attendance) {
+            return res.json({
+                success: false,
+                message: "No attendance session found for this course. Create one first."
+            });
+        }
+
+        // Check if this student already has a status recorded for this session
+        const existingEntry = attendance.students.find(
+            s => s.studentEmail === email
+        );
+
+        if (existingEntry) {
+            // Update their existing status (in case lecturer clicks Present then changes to Absent)
+            existingEntry.status = status;
+        } else {
+            // Add them for the first time
+            attendance.students.push({ studentEmail: email, status });
+        }
+
+        await attendance.save();
+
+        res.json({
+            success: true,
+            message: `${status} marked for student`
+        });
+
+    } catch (error) {
+
+        console.log(error);
+
+        res.json({
+            success: false,
+            message: "Failed to save attendance"
+        });
+
+    }
+
+});
+// ===============================
+// GET STUDENT'S OWN ATTENDANCE
+// ===============================
+
+app.get('/my-attendance/:email', async (req, res) => {
+
+    try {
+
+        const { email } = req.params;
+
+        // Find all attendance records where this student was marked
+        const records = await Attendance.find({
+            "students.studentEmail": email
+        });
+
+        // Extract just this student's status from each record
+        const result = records.map(record => {
+
+            const studentEntry = record.students.find(
+                s => s.studentEmail === email
+            );
+
+            return {
+                course: record.course,
+                date: record.date,
+                status: studentEntry ? studentEntry.status : "Unknown"
+            };
+
+        });
+
+        res.json({ success: true, data: result });
+
+    } catch (error) {
+
+        console.log("MY ATTENDANCE ERROR:", error);
+
+        res.json({ success: false, data: [] });
+
+    }
+
+});
+
+
+
+
+
+
 
 
 // ===============================

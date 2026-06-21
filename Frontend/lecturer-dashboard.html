@@ -3,29 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lecturer Dashboard</title>
     <link rel="stylesheet" href="styles.css">
-    <title>lecturer-Dashboard</title>
 </head>
-
 <body class="dashboard-page">
+
     <div class="dashboard-container">
-    <h1>Welcome to Lecturer Dashboard</h1>
+        <h1>Welcome to Lecturer Dashboard</h1>
+        <button id="logoutBtn">Logout</button>
+    </div>
 
-    <button id="logoutBtn">Logout</button>
-</div>
-    <script>
+    <h2>Create Attendance</h2>
+    <form id="attendanceForm">
+        <input type="text" id="course" placeholder="Course Name">
+        <input type="date" id="date">
+        <button type="submit">Create Attendance</button>
+    </form>
+ 
 
-        const logoutBtn = document.getElementById("logoutBtn");
 
-        logoutBtn.addEventListener("click", () => {
+    
+    <h2>Mark Attendance</h2>
+    <div id="studentList"></div>
 
-            localStorage.removeItem("user");
-
-            window.location.href = "login.html";
-
-        });
-
-    </script>
+    <script src="script.js"></script>
 
 </body>
 </html>
