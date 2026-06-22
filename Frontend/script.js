@@ -206,23 +206,28 @@ if (attendanceBody) {
                         if (record.status === "Present") presentCount++;
                         if (record.status === "Absent") absentCount++;
 
-                        const color = record.status === "Present" ? "green" : "red";
+                        const formattedDate = new Date(record.date).toLocaleDateString();
+                        const badgeClass = record.status === "Present" ? "status-present" : "status-absent";
 
                         attendanceBody.innerHTML += `
                             <tr>
                                 <td>${record.course}</td>
-                                <td>${record.date}</td>
-                                <td style="color: ${color}; font-weight: bold;">
-                                    ${record.status}
-                                </td>
+                                <td>${formattedDate}</td>
+                                <td><span class="${badgeClass}">${record.status}</span></td>
                             </tr>
                         `;
 
                     });
 
-                    if (attendanceSummary) {
-                        attendanceSummary.innerHTML =
-                            `Total — Present: ${presentCount} | Absent: ${absentCount}`;
+                    const elPresent = document.getElementById("totalPresent");
+                    const elAbsent  = document.getElementById("totalAbsent");
+                    const elRate    = document.getElementById("attendanceRate");
+
+                    if (elPresent) elPresent.textContent = presentCount;
+                    if (elAbsent)  elAbsent.textContent  = absentCount;
+                    if (elRate) {
+                        const total = presentCount + absentCount;
+                        elRate.textContent = total > 0 ? Math.round((presentCount / total) * 100) + "%" : "N/A";
                     }
 
                 } else {
