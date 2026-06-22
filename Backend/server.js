@@ -152,38 +152,31 @@ app.post('/login', async (req, res) => {
 //Attendance Route
 
 app.post('/create-attendance', async (req, res) => {
-
     try {
-
         const { course, date, lecturer } = req.body;
 
         const newAttendance = new Attendance({
-
             course,
-            date,
+            date: new Date(date), // Normalizes HTML string parameters into MongoDB ISO dates
             lecturer,
             students: []
-
         });
 
         await newAttendance.save();
 
         res.json({
             success: true,
-            message: "Attendance created successfully"
+            message: "Attendance session created successfully"
         });
 
     } catch (error) {
-
-        console.log(error);
-
-        res.json({
+        console.error("Attendance Session Generation Error:", error);
+        res.status(500).json({
             success: false,
-            message: "Failed to create attendance"
+            message: "Failed to create an active attendance tracking node"
+        
         });
-
     }
-
 });
 
 
@@ -246,12 +239,11 @@ app.post('/mark', async (req, res) => {
         });
 
     } catch (error) {
-
-        console.log(error);
-
-        res.json({
-            success: false,
-            message: "Failed to save attendance"
+        console.error("🔥 FULL USER LOG ARCHIVE ERROR:", error);
+        res.status(500).json({ 
+            success: false, 
+            message: "Database retrieval exception encountered",
+            data: [] 
         });
 
     }
