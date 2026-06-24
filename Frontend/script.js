@@ -127,11 +127,11 @@ async function populateCourseDropdown() {
             response.data.forEach(session => {
 
                 const safeCourse = escapeHtml(session.course);
-                const safeDate = escapeHtml(session.date);
+                const formattedDate = new Date(session.date).toLocaleDateString();
 
                 courseSelect.innerHTML += `
                     <option value="${safeCourse}">
-                        ${safeCourse} — ${safeDate}
+                        ${safeCourse} — ${formattedDate}
                     </option>
                 `;
 
@@ -321,16 +321,14 @@ if (attendanceBody) {
                         if (record.status === "Absent") absentCount++;
 
                         const safeCourse = escapeHtml(record.course);
-                        const safeDate = escapeHtml(record.date);
-                        const color = record.status === "Present" ? "green" : "red";
+                        const formattedDate = new Date(record.date).toLocaleDateString();
+                        const badgeClass = record.status === "Present" ? "status-present" : "status-absent";
 
                         attendanceBody.innerHTML += `
                             <tr>
                                 <td>${safeCourse}</td>
-                                <td>${safeDate}</td>
-                                <td style="color: ${color}; font-weight: bold;">
-                                    ${record.status}
-                                </td>
+                                <td>${formattedDate}</td>
+                                <td><span class="${badgeClass}">${record.status}</span></td>
                             </tr>
                         `;
 
@@ -339,6 +337,17 @@ if (attendanceBody) {
                     if (attendanceSummary) {
                         attendanceSummary.innerHTML =
                             `Total — Present: ${presentCount} | Absent: ${absentCount}`;
+                    }
+
+                    const elPresent = document.getElementById("totalPresent");
+                    const elAbsent  = document.getElementById("totalAbsent");
+                    const elRate    = document.getElementById("attendanceRate");
+
+                    if (elPresent) elPresent.textContent = presentCount;
+                    if (elAbsent)  elAbsent.textContent  = absentCount;
+                    if (elRate) {
+                        const total = presentCount + absentCount;
+                        elRate.textContent = total > 0 ? Math.round((presentCount / total) * 100) + "%" : "N/A";
                     }
 
                 } else {
@@ -377,12 +386,12 @@ async function loadAttendance() {
         data.forEach(att => {
 
             const safeCourse = escapeHtml(att.course);
-            const safeDate = escapeHtml(att.date);
+            const formattedDate = new Date(att.date).toLocaleDateString();
 
             container.innerHTML += `
                 <div style="border:1px solid #ccc; padding:10px; margin:10px;">
                     <h3>${safeCourse}</h3>
-                    <p>${safeDate}</p>
+                    <p>${formattedDate}</p>
                     <button onclick="deleteAttendance('${att._id}')">Delete</button>
                 </div>
             `;

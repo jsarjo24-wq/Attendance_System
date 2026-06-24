@@ -9,31 +9,107 @@
 <body class="dashboard-page">
 
     <div class="dashboard-container">
-        <h1>Welcome to Student Dashboard</h1>
+        <div class="nav-left">
+            <div class="nav-dot"></div>
+            <h1>Student Dashboard</h1>
+            <span class="nav-badge">Student</span>
+        </div>
         <button id="logoutBtn">Logout</button>
     </div>
 
-    <div style="padding: 20px;">
-        <h2>My Attendance</h2>
-        <p id="attendanceSummary"></p>
+    <div class="content-area">
+        <div class="section-card">
+            <h2>My Attendance</h2>
+            <p id="attendanceSummary"></p>
 
-        <table id="attendanceTable" border="1" cellpadding="8" cellspacing="0" style="width:100%; border-collapse: collapse;">
-            <thead>
-                <tr>
-                    <th>Course</th>
-                    <th>Date</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody id="attendanceBody">
-                <tr>
-                    <td colspan="3">Loading...</td>
-                </tr>
-            </tbody>
-        </table>
+            <div class="attendance-summary">
+                <div class="summary-pill pill-present">
+                    <div class="pill-label">Present</div>
+                    <div class="pill-value" id="totalPresent">—</div>
+                </div>
+                <div class="summary-pill pill-absent">
+                    <div class="pill-label">Absent</div>
+                    <div class="pill-value" id="totalAbsent">—</div>
+                </div>
+                <div class="summary-pill pill-rate">
+                    <div class="pill-label">Rate</div>
+                    <div class="pill-value" id="attendanceRate">—</div>
+                </div>
+            </div>
+
+            <div id="courseBreakdown"></div>
+
+            <div class="attendance-table-wrapper">
+                <table id="attendanceTable">
+                    <thead>
+                        <tr>
+                            <th>Course</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="attendanceBody">
+                        <tr>
+                            <td colspan="3" style="text-align:center; padding:22px; color:#444468; font-style:italic;">
+                                Loading attendance records...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
     <script src="script.js"></script>
+
+    <script>
+    (function() {
+        const body      = document.getElementById("attendanceBody");
+        const breakdown = document.getElementById("courseBreakdown");
+        const elPresent = document.getElementById("totalPresent");
+        const elAbsent  = document.getElementById("totalAbsent");
+        const elRate    = document.getElementById("attendanceRate");
+
+        const observer = new MutationObserver(() => {
+            const rows = body.querySelectorAll("tr");
+            if (!rows.length) return;
+            if (rows[0].querySelector("td[colspan]")) return;
+            observer.disconnect();
+            buildStats(rows);
+        });
+
+        observer.observe(body, { childList: true, subtree: true });
+
+        function buildStats(rows) {
+            const courses = {};
+            let gPresent = 0, gAbsent = 0;
+            rows.forEach(row => {
+                const cells = row.querySelectorAll("td");
+                if (cells.length < 3) return;
+                const course = cells[0].textContent.trim();
+                const status = cells[2].textContent.trim();
+                if (!courses[course]) courses[course] = { present: 0, absent: 0 };
+                if (status === "Present") { courses[course].present++; gPresent++; }
+                else if (status === "Absent") { courses[course].absent++; gAbsent++; }
+            });
+            const total = gPresent + gAbsent;
+            elPresent.textContent = gPresent;
+            elAbsent.textContent  = gAbsent;
+            elRate.textContent    = total > 0 ? Math.round((gPresent / total) * 100) + "%" : "N/A";
+            if (!Object.keys(courses).length) return;
+            breakdown.innerHTML = Object.entries(courses).map(([name, c]) => {
+                const t    = c.present + c.absent;
+                const rate = t > 0 ? Math.round((c.present / t) * 100) : 0;
+                const cls  = rate >= 75 ? "rate-good" : rate >= 50 ? "rate-ok" : "rate-bad";
+                return `<div class="course-chip">
+                    <div class="course-chip-name">${name}</div>
+                    <div class="course-chip-stats">${c.present} present &middot; ${c.absent} absent</div>
+                    <div class="course-chip-rate ${cls}">${rate}%</div>
+                </div>`;
+            }).join("");
+        }
+    })();
+    </script>
 
 </body>
 </html>

@@ -139,9 +139,7 @@ app.post('/login', async (req, res) => {
 // ===============================
 
 app.post('/create-attendance', async (req, res) => {
-
     try {
-
         const { course, date, lecturer } = req.body;
 
         if (!course || !date) {
@@ -163,7 +161,7 @@ app.post('/create-attendance', async (req, res) => {
 
         const newAttendance = new Attendance({
             course,
-            date,
+            date: new Date(date), // Normalizes HTML string parameters into MongoDB ISO dates
             lecturer,
             students: []
         });
@@ -172,20 +170,17 @@ app.post('/create-attendance', async (req, res) => {
 
         res.json({
             success: true,
-            message: "Attendance created successfully"
+            message: "Attendance session created successfully"
         });
 
     } catch (error) {
-
-        console.log("CREATE ATTENDANCE ERROR:", error);
-
+        console.error("Attendance Session Generation Error:", error);
         res.status(500).json({
             success: false,
-            message: "Failed to create attendance"
+            message: "Failed to create an active attendance tracking node"
+        
         });
-
     }
-
 });
 // ===============================
 // GET ALL STUDENTS
@@ -277,12 +272,11 @@ app.post('/mark', async (req, res) => {
         });
 
     } catch (error) {
-
-        console.log("MARK ERROR:", error);
-
-        res.status(500).json({
-            success: false,
-            message: "Failed to save attendance"
+        console.error("🔥 FULL USER LOG ARCHIVE ERROR:", error);
+        res.status(500).json({ 
+            success: false, 
+            message: "Database retrieval exception encountered",
+            data: [] 
         });
 
     }
@@ -395,23 +389,51 @@ app.get('/my-attendance/:email', async (req, res) => {
 // GET ALL ATTENDANCE SESSIONS (full list)
 // ===============================
 
-app.get('/attendance', async (req, res) => {
-
+app.post('/create-attendance', async (req, res) => {
     try {
+        const { course, date, lecturer } = req.body;
 
-        const data = await Attendance.find();
-        res.json(data);
+        if (!course || !date) {
+            return res.json({
+                success: false,
+                message: "Course and date are required"
+            });
+        }
+
+        
+        const existing = await Attendance.findOne({ course, date: new Date(date) });
+
+        if (existing) {
+            return res.json({
+                success: false,
+                message: `A session for "${course}" on ${date} already exists.`
+            });
+        }
+
+        const newAttendance = new Attendance({
+            course,
+            date: new Date(date), // Normalizes HTML string parameters into MongoDB ISO dates
+            lecturer,
+            students: []
+        });
+
+        await newAttendance.save();
+
+        res.json({
+            success: true,
+            message: "Attendance session created successfully"
+        });
 
     } catch (error) {
 
-        console.log("GET ATTENDANCE ERROR:", error);
+        console.log("CREATE ATTENDANCE ERROR:", error);
 
-        res.status(500).json({ success: false, message: "Failed to fetch attendance" });
-
+        res.status(500).json({
+            success: false,
+            message: "Failed to create an active attendance tracking node"
+        });
     }
-
 });
-
 
 // ===============================
 // DELETE ATTENDANCE SESSION
