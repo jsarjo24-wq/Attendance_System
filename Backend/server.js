@@ -1,4 +1,4 @@
-
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
@@ -9,7 +9,7 @@ const Attendance = require('./models/Attendance');
 
 const app = express();
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 
 // ===============================
@@ -24,7 +24,7 @@ app.use(express.json());
 // MONGODB CONNECTION
 // ===============================
 
-mongoose.connect('mongodb://127.0.0.1:27017/attendance_system')
+mongoose.connect(process.env.MONGO_URI)
 
 .then(() => {
     console.log('Connected to MongoDB');
@@ -54,26 +54,17 @@ app.post('/register', async (req, res) => {
 
     try {
 
-        const { name, email, password, role} = req.body;
+        const { name, email, password, role } = req.body;
 
-        console.log("REGISTER ROUTE HIT");
-        console.log("ROLE:", role)
-
-        // HASH PASSWORD
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        console.log("Original Password:", password);
-        console.log("Hashed Password:", hashedPassword);
-
-        // CREATE USER
         const newUser = new User({
             name,
             email,
-            password: hashedPassword,   
+            password: hashedPassword,
             role
         });
 
-        // SAVE USER
         await newUser.save();
 
         res.json({
@@ -82,13 +73,15 @@ app.post('/register', async (req, res) => {
         });
 
     } catch (error) {
-    console.log("🔥 FULL REGISTER ERROR:", error); // VERY IMPORTANT
 
-    return res.status(500).json({
-        success: false,
-        message: error.message
-    });
-}
+        console.log("REGISTER ERROR:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: error.message
+        });
+
+    }
 
 });
 
@@ -103,33 +96,24 @@ app.post('/login', async (req, res) => {
 
         const { email, password } = req.body;
 
-        // FIND USER
         const user = await User.findOne({ email });
 
-        // USER NOT FOUND
         if (!user) {
-
             return res.json({
                 success: false,
                 message: "User not found"
             });
-
         }
 
-        // COMPARE PASSWORD
         const isMatch = await bcrypt.compare(password, user.password);
 
-        // WRONG PASSWORD
         if (!isMatch) {
-
             return res.json({
                 success: false,
                 message: "Incorrect password"
             });
-
         }
 
-        // LOGIN SUCCESS
         res.json({
             success: true,
             message: "Login successful",
@@ -149,7 +133,10 @@ app.post('/login', async (req, res) => {
 
 });
 
-//Attendance Route
+
+// ===============================
+// CREATE ATTENDANCE SESSION
+// ===============================
 
 app.post('/create-attendance', async (req, res) => {
 
@@ -157,13 +144,28 @@ app.post('/create-attendance', async (req, res) => {
 
         const { course, date, lecturer } = req.body;
 
-        const newAttendance = new Attendance({
+        if (!course || !date) {
+            return res.json({
+                success: false,
+                message: "Course and date are required"
+            });
+        }
 
+        // Check if this exact session already exists
+        const existing = await Attendance.findOne({ course, date });
+
+        if (existing) {
+            return res.json({
+                success: false,
+                message: `A session for "${course}" on ${date} already exists.`
+            });
+        }
+
+        const newAttendance = new Attendance({
             course,
             date,
             lecturer,
             students: []
-
         });
 
         await newAttendance.save();
@@ -175,9 +177,9 @@ app.post('/create-attendance', async (req, res) => {
 
     } catch (error) {
 
-        console.log(error);
+        console.log("CREATE ATTENDANCE ERROR:", error);
 
-        res.json({
+        res.status(500).json({
             success: false,
             message: "Failed to create attendance"
         });
@@ -185,9 +187,9 @@ app.post('/create-attendance', async (req, res) => {
     }
 
 });
-
-
-//Get all Students  
+// ===============================
+// GET ALL STUDENTS
+// ===============================
 
 app.get('/students', async (req, res) => {
 
@@ -199,15 +201,41 @@ app.get('/students', async (req, res) => {
 
     } catch (error) {
 
-        console.log(error);
+        console.log("GET STUDENTS ERROR:", error);
 
-        res.json([]);
+        res.status(500).json([]);
 
     }
 
 });
 
-//Mark Router 
+
+// ===============================
+// GET ALL SESSIONS (for dropdowns)
+// ===============================
+
+app.get('/sessions', async (req, res) => {
+
+    try {
+
+        const sessions = await Attendance.find({}, "course date _id").sort({ _id: -1 });
+
+        res.json({ success: true, data: sessions });
+
+    } catch (error) {
+
+        console.log("SESSIONS ERROR:", error);
+
+        res.status(500).json({ success: false, data: [] });
+
+    }
+
+});
+
+
+// ===============================
+// MARK ATTENDANCE
+// ===============================
 
 app.post('/mark', async (req, res) => {
 
@@ -215,7 +243,13 @@ app.post('/mark', async (req, res) => {
 
         const { email, status, course } = req.body;
 
-        // Find the most recent attendance session for this course
+        if (status !== "Present" && status !== "Absent") {
+            return res.json({
+                success: false,
+                message: "Status must be 'Present' or 'Absent'"
+            });
+        }
+
         const attendance = await Attendance.findOne({ course }).sort({ _id: -1 });
 
         if (!attendance) {
@@ -225,16 +259,13 @@ app.post('/mark', async (req, res) => {
             });
         }
 
-        // Check if this student already has a status recorded for this session
         const existingEntry = attendance.students.find(
             s => s.studentEmail === email
         );
 
         if (existingEntry) {
-            // Update their existing status (in case lecturer clicks Present then changes to Absent)
             existingEntry.status = status;
         } else {
-            // Add them for the first time
             attendance.students.push({ studentEmail: email, status });
         }
 
@@ -247,9 +278,9 @@ app.post('/mark', async (req, res) => {
 
     } catch (error) {
 
-        console.log(error);
+        console.log("MARK ERROR:", error);
 
-        res.json({
+        res.status(500).json({
             success: false,
             message: "Failed to save attendance"
         });
@@ -257,6 +288,68 @@ app.post('/mark', async (req, res) => {
     }
 
 });
+
+
+// ===============================
+// UPDATE ATTENDANCE
+// ===============================
+
+app.put('/update-attendance', async (req, res) => {
+
+    try {
+
+        const { email, course, status } = req.body;
+
+        if (status !== "Present" && status !== "Absent") {
+            return res.json({
+                success: false,
+                message: "Status must be 'Present' or 'Absent'"
+            });
+        }
+
+        const attendance = await Attendance.findOne({ course });
+
+        if (!attendance) {
+            return res.json({
+                success: false,
+                message: "Attendance not found"
+            });
+        }
+
+        const student = attendance.students.find(
+            s => s.studentEmail === email
+        );
+
+        if (!student) {
+            return res.json({
+                success: false,
+                message: "Student record not found"
+            });
+        }
+
+        student.status = status;
+
+        await attendance.save();
+
+        res.json({
+            success: true,
+            message: "Attendance updated successfully"
+        });
+
+    } catch (error) {
+
+        console.log("UPDATE ERROR:", error);
+
+        res.status(500).json({
+            success: false,
+            message: "Update failed"
+        });
+
+    }
+
+});
+
+
 // ===============================
 // GET STUDENT'S OWN ATTENDANCE
 // ===============================
@@ -267,12 +360,10 @@ app.get('/my-attendance/:email', async (req, res) => {
 
         const { email } = req.params;
 
-        // Find all attendance records where this student was marked
         const records = await Attendance.find({
             "students.studentEmail": email
         });
 
-        // Extract just this student's status from each record
         const result = records.map(record => {
 
             const studentEntry = record.students.find(
@@ -293,17 +384,71 @@ app.get('/my-attendance/:email', async (req, res) => {
 
         console.log("MY ATTENDANCE ERROR:", error);
 
-        res.json({ success: false, data: [] });
+        res.status(500).json({ success: false, data: [] });
 
     }
 
 });
 
 
+// ===============================
+// GET ALL ATTENDANCE SESSIONS (full list)
+// ===============================
+
+app.get('/attendance', async (req, res) => {
+
+    try {
+
+        const data = await Attendance.find();
+        res.json(data);
+
+    } catch (error) {
+
+        console.log("GET ATTENDANCE ERROR:", error);
+
+        res.status(500).json({ success: false, message: "Failed to fetch attendance" });
+
+    }
+
+});
 
 
+// ===============================
+// DELETE ATTENDANCE SESSION
+// ===============================
 
+app.delete('/attendance/:id', async (req, res) => {
 
+    try {
+
+        const { id } = req.params;
+
+        const deleted = await Attendance.findByIdAndDelete(id);
+
+        if (!deleted) {
+            return res.json({
+                success: false,
+                message: "Attendance not found"
+            });
+        }
+
+        res.json({
+            success: true,
+            message: "Attendance deleted successfully"
+        });
+
+    } catch (error) {
+
+        console.log("DELETE ERROR:", error);
+
+        res.status(400).json({
+            success: false,
+            message: "Invalid attendance ID"
+        });
+
+    }
+
+});
 
 
 // ===============================
