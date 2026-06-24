@@ -1,4 +1,15 @@
 // ===============================
+// SIMPLE XSS ESCAPE HELPER
+// ===============================
+
+function escapeHtml(text) {
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+
+// ===============================
 // LOGIN FORM
 // ===============================
 
@@ -95,7 +106,50 @@ if (logoutBtn) {
 
 
 // ===============================
-// ATTENDANCE FORM
+// POPULATE COURSE SESSION DROPDOWN
+// ===============================
+
+async function populateCourseDropdown() {
+
+    const courseSelect = document.getElementById("courseSelect");
+
+    if (!courseSelect) return;
+
+    try {
+
+        const res = await fetch("http://localhost:3000/sessions");
+        const response = await res.json();
+
+        courseSelect.innerHTML = `<option value="">-- Choose a course session --</option>`;
+
+        if (response.success) {
+
+            response.data.forEach(session => {
+
+                const safeCourse = escapeHtml(session.course);
+                const safeDate = escapeHtml(session.date);
+
+                courseSelect.innerHTML += `
+                    <option value="${safeCourse}">
+                        ${safeCourse} — ${safeDate}
+                    </option>
+                `;
+
+            });
+
+        }
+
+    } catch (error) {
+
+        console.log("Dropdown load error:", error);
+
+    }
+
+}
+
+
+// ===============================
+// ATTENDANCE FORM + STUDENT LIST
 // ===============================
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -119,6 +173,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 const data = await response.json();
                 alert(data.message);
 
+                populateCourseDropdown();
+                loadAttendance();
+
             } catch (error) {
                 console.log("Attendance Error:", error);
             }
@@ -126,22 +183,26 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
-    // ===============================
-    // STUDENT LIST
-    // ===============================
-
     const studentList = document.getElementById("studentList");
 
     if (studentList) {
+
+        populateCourseDropdown();
+
         fetch("http://localhost:3000/students")
             .then(res => res.json())
             .then(data => {
                 data.forEach(student => {
+
+                    const safeName = escapeHtml(student.name);
+                    const safeEmail = escapeHtml(student.email);
+
                     studentList.innerHTML += `
                         <div>
-                            <p>${student.name} (${student.email})</p>
+                            <p>${safeName} (${safeEmail})</p>
                             <button onclick="mark('${student.email}', 'Present')">Present</button>
                             <button onclick="mark('${student.email}', 'Absent')">Absent</button>
+                            <button onclick="updateAttendance('${student.email}')">Edit Status</button>
                             <hr>
                         </div>
                     `;
@@ -150,15 +211,26 @@ document.addEventListener("DOMContentLoaded", () => {
             .catch(error => console.log("Student List Error:", error));
     }
 
+    if (document.getElementById("attendanceList")) {
+        loadAttendance();
+    }
+
 });
 
 
 // ===============================
-// MARK ATTENDANCE
+// MARK ATTENDANCE (uses dropdown)
 // ===============================
 
 async function mark(email, status) {
-    const course = prompt("Enter course name");
+
+    const courseSelect = document.getElementById("courseSelect");
+    const course = courseSelect ? courseSelect.value : "";
+
+    if (!course) {
+        alert("Please select a course session first.");
+        return;
+    }
 
     try {
         const response = await fetch("http://localhost:3000/mark", {
@@ -175,8 +247,50 @@ async function mark(email, status) {
     }
 }
 
+
 // ===============================
-// MY ATTENDANCE (STUDENT)
+// UPDATE ATTENDANCE (uses dropdown + confirm)
+// ===============================
+
+async function updateAttendance(email) {
+
+    const courseSelect = document.getElementById("courseSelect");
+    const course = courseSelect ? courseSelect.value : "";
+
+    if (!course) {
+        alert("Please select a course session first.");
+        return;
+    }
+
+    const status = confirm("Click OK for Present, Cancel for Absent")
+        ? "Present"
+        : "Absent";
+
+    try {
+
+        const response = await fetch(
+            "http://localhost:3000/update-attendance",
+            {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, course, status })
+            }
+        );
+
+        const data = await response.json();
+        alert(data.message);
+
+    } catch (error) {
+
+        console.log(error);
+
+    }
+
+}
+
+
+// ===============================
+// MY ATTENDANCE (STUDENT VIEW)
 // ===============================
 
 const attendanceBody = document.getElementById("attendanceBody");
@@ -206,12 +320,14 @@ if (attendanceBody) {
                         if (record.status === "Present") presentCount++;
                         if (record.status === "Absent") absentCount++;
 
+                        const safeCourse = escapeHtml(record.course);
+                        const safeDate = escapeHtml(record.date);
                         const color = record.status === "Present" ? "green" : "red";
 
                         attendanceBody.innerHTML += `
                             <tr>
-                                <td>${record.course}</td>
-                                <td>${record.date}</td>
+                                <td>${safeCourse}</td>
+                                <td>${safeDate}</td>
                                 <td style="color: ${color}; font-weight: bold;">
                                     ${record.status}
                                 </td>
@@ -241,3 +357,69 @@ if (attendanceBody) {
 }
 
 
+// ===============================
+// LOAD + DELETE ATTENDANCE SESSIONS
+// ===============================
+
+async function loadAttendance() {
+
+    const container = document.getElementById("attendanceList");
+
+    if (!container) return;
+
+    try {
+
+        const res = await fetch("http://localhost:3000/attendance");
+        const data = await res.json();
+
+        container.innerHTML = "";
+
+        data.forEach(att => {
+
+            const safeCourse = escapeHtml(att.course);
+            const safeDate = escapeHtml(att.date);
+
+            container.innerHTML += `
+                <div style="border:1px solid #ccc; padding:10px; margin:10px;">
+                    <h3>${safeCourse}</h3>
+                    <p>${safeDate}</p>
+                    <button onclick="deleteAttendance('${att._id}')">Delete</button>
+                </div>
+            `;
+        });
+
+    } catch (error) {
+
+        console.log("Load attendance error:", error);
+
+    }
+
+}
+
+
+async function deleteAttendance(id) {
+
+    const confirmDelete = confirm("Are you sure?");
+
+    if (!confirmDelete) return;
+
+    try {
+
+        const res = await fetch(
+            `http://localhost:3000/attendance/${id}`,
+            { method: "DELETE" }
+        );
+
+        const data = await res.json();
+
+        alert(data.message);
+
+        loadAttendance();
+
+    } catch (error) {
+
+        console.log(error);
+
+    }
+
+}

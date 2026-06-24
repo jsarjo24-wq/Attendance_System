@@ -19,12 +19,18 @@
         <input type="date" id="date">
         <button type="submit">Create Attendance</button>
     </form>
- 
 
-
-    
     <h2>Mark Attendance</h2>
+
+    <label for="courseSelect">Select Session:</label>
+    <select id="courseSelect">
+        <option value="">-- Choose a course session --</option>
+    </select>
+
     <div id="studentList"></div>
+
+    <h2>Attendance Sessions</h2>
+    <div id="attendanceList"></div>
 
     <script src="script.js"></script>
 
