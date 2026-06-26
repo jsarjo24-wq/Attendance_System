@@ -23,7 +23,7 @@ if (loginForm) {
         const password = document.getElementById("password").value;
 
         try {
-            const response = await fetch("http://localhost:3000/login", {
+            const response = await fetch("https://attendance-system-a8eq.onrender.com/login", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email, password })
@@ -68,7 +68,7 @@ if (registerForm) {
         const role = document.getElementById("role").value;
 
         try {
-            const response = await fetch("http://localhost:3000/register", {
+            const response = await fetch("https://attendance-system-a8eq.onrender.com/register", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ name, email, password, role })
@@ -117,7 +117,7 @@ async function populateCourseDropdown() {
 
     try {
 
-        const res = await fetch("http://localhost:3000/sessions");
+        const res = await fetch("https://attendance-system-a8eq.onrender.com/sessions");
         const response = await res.json();
 
         courseSelect.innerHTML = `<option value="">-- Choose a course session --</option>`;
@@ -164,7 +164,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const date = document.getElementById("date").value;
 
             try {
-                const response = await fetch("http://localhost:3000/create-attendance", {
+                const response = await fetch("https://attendance-system-a8eq.onrender.com/create-attendance", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ course, date, lecturer: "Lecturer" })
@@ -189,7 +189,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         populateCourseDropdown();
 
-        fetch("http://localhost:3000/students")
+        fetch("https://attendance-system-a8eq.onrender.com/students")
             .then(res => res.json())
             .then(data => {
                 data.forEach(student => {
@@ -233,7 +233,7 @@ async function mark(email, status) {
     }
 
     try {
-        const response = await fetch("http://localhost:3000/mark", {
+        const response = await fetch("https://attendance-system-a8eq.onrender.com/mark", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email, status, course })
@@ -269,7 +269,7 @@ async function updateAttendance(email) {
     try {
 
         const response = await fetch(
-            "http://localhost:3000/update-attendance",
+            "https://attendance-system-a8eq.onrender.com/update-attendance",
             {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
@@ -304,7 +304,7 @@ if (attendanceBody) {
         attendanceBody.innerHTML = `<tr><td colspan="3">Not logged in.</td></tr>`;
     } else {
 
-        fetch(`http://localhost:3000/my-attendance/${email}`)
+        fetch(`https://attendance-system-a8eq.onrender.com/my-attendance/${email}`)
             .then(res => res.json())
             .then(response => {
 
@@ -378,7 +378,7 @@ async function loadAttendance() {
 
     try {
 
-        const res = await fetch("http://localhost:3000/attendance");
+        const res = await fetch("https://attendance-system-a8eq.onrender.com/attendance");
         const data = await res.json();
 
         container.innerHTML = "";
@@ -415,7 +415,7 @@ async function deleteAttendance(id) {
     try {
 
         const res = await fetch(
-            `http://localhost:3000/attendance/${id}`,
+            `https://attendance-system-a8eq.onrender.com/attendance/${id}`,
             { method: "DELETE" }
         );
 
