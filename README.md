@@ -112,7 +112,7 @@ Open `Frontend/login.html` in a browser, or serve the `Frontend` folder with a l
 ## Authors
 
 - Sarjo Jallow
-- sheriffo A. Darboe31
+- Sheriffo A. Darboe
 
 ## Course
 
